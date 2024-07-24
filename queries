@@ -1,0 +1,203 @@
+1. Basic Application Logs Query
+This query retrieves logs from your application indexed in Splunk.
+index=your_app_index sourcetype=your_app_sourcetype
+
+2. Error Monitoring
+This query fetches all error logs from your application.
+index=your_app_index sourcetype=your_app_sourcetype log_level=ERROR
+
+3. Monitoring Specific Application Events
+If you want to monitor specific events, like user logins or transactions:
+index=your_app_index sourcetype=your_app_sourcetype event_type="user_login"
+
+4. Performance Monitoring
+To monitor the performance of your application, such as response times:
+index=your_app_index sourcetype=your_app_sourcetype | stats avg(response_time) by endpoint
+
+5. Dashboard for Real-Time Monitoring
+To create a real-time monitoring dashboard:
+a. Query for Real-Time Errors
+index=your_app_index sourcetype=your_app_sourcetype log_level=ERROR | timechart count by error_message
+
+b. Query for Response Times
+index=your_app_index sourcetype=your_app_sourcetype | timechart avg(response_time) by endpoint
+
+6. User Activity Monitoring
+To track user activities:
+index=your_app_index sourcetype=your_app_sourcetype | stats count by user_id
+
+7. Alert Setup
+Set up alerts for critical conditions. For example, alert on high error rates:
+index=your_app_index sourcetype=your_app_sourcetype log_level=ERROR | stats count by error_mes
+
+8.  request count based on a specific log message
+index=your_app_index sourcetype=your_app_sourcetype "input request for login service"
+| stats count as request_count
+
+index=your_app_index sourcetype=your_app_sourcetype "input request for login service"
+| stats count as request_count by user_id
+
+Example Result:
+After running the query, you'll get a table with two columns: user_id and request_count.
+
+user_id	request_count
+user123	15
+user456	8
+user789	23
+
+9.  I need query to filter some fields from the logs and i need count based on search. 
+I want to filter devicetype, appsource, username, email i want to search this based on client name example GPT.
+query:
+index=your_app_index sourcetype=your_app_sourcetype client_name="GPT"
+| stats count by devicetype, appsource, username, email
+
+result:
+devicetype	appsource	username	email	count
+mobile	app1	user123	user123@example.com	10
+desktop	app2	user456	user456@example.com	5
+tablet	app1	user789	user789@example.com	7
+
+Additional Filters:
+If you need to add more specific filters or want to search logs within a particular time frame, you can enhance the query. 
+For example, to limit the search to logs from the past 7 days:
+query:
+index=app_logs sourcetype=app_log client_name="GPT" earliest=-7d@d latest=now
+| stats count by devicetype, appsource, username, email
+
+Adding Field Extraction (if needed):
+If the fields (devicetype, appsource, username, email, and client_name) are not automatically extracted in your logs, 
+you might need to use rex to extract them.
+Here is an example with rex:
+query:
+index=app_logs sourcetype=app_log
+| rex field=_raw "client_name=(?P<client_name>[^ ]+)"
+| rex field=_raw "devicetype=(?P<devicetype>[^ ]+)"
+| rex field=_raw "appsource=(?P<appsource>[^ ]+)"
+| rex field=_raw "username=(?P<username>[^ ]+)"
+| rex field=_raw "email=(?P<email>[^ ]+)"
+| search client_name="GPT"
+| stats count by devicetype, appsource, username, email
+
+Explanation of rex:
+rex field=_raw "client_name=(?P<client_name>[^ ]+)": Extracts the client_name field from the raw log data.
+Repeat similar rex commands for devicetype, appsource, username, and email.
+
+search client_name="GPT": Filters logs to include only those where client_name is "GPT".
+stats count by devicetype, appsource, username, email: Counts the occurrences of the logs, 
+grouped by devicetype, appsource, username, and email.
+
+10. Example Splunk Query for Monitoring Exceptions
+index=your_app_index sourcetype=your_app_sourcetype "Exception" OR "Error"
+
+index=your_app_index sourcetype=your_app_sourcetype ("Exception" OR "Error" OR "Stacktrace" OR "Fail")
+| stats count as exception_count by _time
+| sort -_time
+
+index=your_app_index sourcetype=your_app_sourcetype ("Exception" OR "Error" OR "Stacktrace" OR "Fail")
+| timechart span=1h count as exception_count
+
+10. Splunk Query to Count HTTP Response Codes
+index=your_app_index sourcetype=your_app_sourcetype ("200" OR "401" OR "500")
+| stats count as response_count by http_response_code
+
+index=your_app_index sourcetype=your_app_sourcetype
+| stats count as response_count by http_response_code
+| where http_response_code IN ("200", "401", "500")
+
+
+
+top 10 queries to monitor application in production system.
+-----------------------------------------------------------
+Monitoring applications in a production environment is critical for maintaining performance, availability, 
+and reliability. Here are ten essential Splunk queries commonly used to monitor applications in production systems:
+
+1. Overall Error Rate
+Monitor the overall error rate to identify if there is a sudden increase in errors.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype ("Exception" OR "Error" OR "Fail")
+| timechart span=1h count as error_count
+2. HTTP Response Codes Distribution
+Track the distribution of HTTP response codes to understand the types of responses being returned.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype
+| stats count as response_count by http_response_code
+| sort -response_count
+3. Application Latency
+Monitor the latency of your application to ensure it’s performing within acceptable limits.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype
+| stats avg(response_time) as avg_response_time max(response_time) as max_response_time
+4. Top Errors
+Identify the most frequent errors occurring in your application.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype ("Exception" OR "Error")
+| stats count as error_count by error_message
+| sort -error_count
+| head 10
+5. User Authentication Failures
+Track failed authentication attempts to detect potential security issues.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype "Failed login" OR "Authentication error"
+| stats count as failure_count by username
+| sort -failure_count
+6. Service Availability
+Monitor the availability of critical services by checking for service downtime or failures.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype ("Service down" OR "Unavailable")
+| timechart span=1h count as downtime_count
+7. Server CPU and Memory Usage
+Keep an eye on the CPU and memory usage of your servers to identify potential resource constraints.
+
+spl
+Copy code
+index=server_metrics_index sourcetype=server_metrics
+| stats avg(cpu_usage) as avg_cpu_usage avg(memory_usage) as avg_memory_usage by host
+| sort -avg_cpu_usage
+8. Application Throughput
+Measure the throughput of your application to ensure it can handle the expected load.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype "Transaction"
+| timechart span=1h count as transaction_count
+9. Response Time by Endpoint
+Analyze response times for different API endpoints to identify performance bottlenecks.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype
+| stats avg(response_time) as avg_response_time by api_endpoint
+| sort -avg_response_time
+10. Anomalies in Log Patterns
+Detect anomalies or unusual patterns in your logs that might indicate problems.
+
+spl
+Copy code
+index=your_app_index sourcetype=your_app_sourcetype
+| timechart span=1h count as log_count
+| anomalydetection log_count
+Explanation for Each Query:
+Overall Error Rate: Provides a view of how frequently errors occur over time.
+HTTP Response Codes Distribution: Shows the distribution of various HTTP response codes, helping to identify issues with response codes.
+Application Latency: Measures the average and maximum response times to monitor application performance.
+Top Errors: Lists the most frequent error messages to help prioritize which errors need attention.
+User Authentication Failures: Tracks failed login attempts, which can be indicative of security issues or user problems.
+Service Availability: Monitors the availability of services and detects periods of downtime.
+Server CPU and Memory Usage: Provides insights into resource usage on servers, helping to identify potential performance issues.
+Application Throughput: Measures the number of transactions or requests to ensure the application handles the load effectively.
+Response Time by Endpoint: Analyzes response times for different API endpoints to identify performance bottlenecks.
+Anomalies in Log Patterns: Detects unusual log patterns that might indicate potential issues or anomalies.
+These queries can be customized to fit the specific metrics and logs of your application environment and can be used to create dashboards 
+and alerts to ensure your production system is running smoothly.
