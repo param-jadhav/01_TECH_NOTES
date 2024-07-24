@@ -201,3 +201,128 @@ Response Time by Endpoint: Analyzes response times for different API endpoints t
 Anomalies in Log Patterns: Detects unusual log patterns that might indicate potential issues or anomalies.
 These queries can be customized to fit the specific metrics and logs of your application environment and can be used to create dashboards 
 and alerts to ensure your production system is running smoothly.
+
+
+Basic Usage of spath
+--------------------
+In Splunk, the spath command is used to extract fields from structured data formats such as JSON, XML, 
+or key-value pairs. It allows you to parse and extract specific values from these types of data within your logs or events.
+1. Extract Fields from JSON
+If your log data contains JSON-formatted fields, spath can be used to extract and work with those fields.
+index=your_index sourcetype=your_sourcetype
+| spath input=_raw
+| table user action details.ip details.location
+
+
+
+Example Log Data
+Log Entries:
+
+JSON Log Entry 1:
+
+json
+Copy code
+{
+  "user": "john_doe",
+  "action": "login",
+  "details": {
+    "ip": "192.168.1.1",
+    "location": "New York"
+  }
+}
+JSON Log Entry 2:
+
+json
+Copy code
+{
+  "user": "jane_smith",
+  "action": "logout",
+  "details": {
+    "ip": "192.168.1.2",
+    "location": "San Francisco"
+  }
+}
+JSON Log Entry 3:
+
+json
+Copy code
+{
+  "user": "alice_johnson",
+  "action": "login",
+  "details": {
+    "ip": "192.168.1.3",
+    "location": "Chicago"
+  }
+}
+Splunk Query
+Query:
+
+spl
+Copy code
+index=your_index sourcetype=your_sourcetype
+| spath input=_raw
+| table user action details.ip details.location
+Example Result
+Result Table:
+
+user	action	details.ip	details.location
+john_doe	login	192.168.1.1	New York
+jane_smith	logout	192.168.1.2	San Francisco
+alice_johnson	login	192.168.1.3	Chicago
+Explanation of the Result
+user: Displays the user name extracted from the JSON field user.
+action: Shows the action performed by the user extracted from the JSON field action.
+details.ip: Shows the IP address extracted from the nested JSON field details.ip.
+details.location: Shows the location extracted from the nested JSON field details.location.
+The spath command parses the JSON data from the _raw field and extracts the specified fields into a table format. This helps in visualizing and analyzing the data more effectively.
+
+
+
+
+
+
+Query Breakdown
+Query:
+
+spl
+Copy code
+index=login_pcf_np "transid123"
+| spath msg.message
+| table _time cf_app_name msg.TransactionID msg.message
+Explanation
+index=login_pcf_np "transid123":
+
+Searches the login_pcf_np index for events containing the string transid123.
+| spath msg.message:
+
+Parses the msg.message field if it contains structured data (e.g., JSON). This command will extract fields from the msg.message field based on its structure.
+| table _time cf_app_name msg.TransactionID msg.message:
+
+Creates a table showing the _time, cf_app_name, msg.TransactionID, and msg.message fields.
+Correct Usage of spath
+1. Ensure Correct Field Extraction:
+
+If msg.message is a structured field (e.g., JSON) and you want to extract nested fields within it, make sure spath is properly used. Here’s an example assuming msg.message is JSON:
+
+spl
+Copy code
+index=login_pcf_np "transid123"
+| spath input=msg.message
+| table _time cf_app_name msg.TransactionID msg.message.some_nested_field
+2. Extract Nested Fields:
+
+If msg.message is JSON and contains nested fields, you need to specify the paths to those fields. For example:
+
+spl
+Copy code
+index=login_pcf_np "transid123"
+| spath input=msg.message
+| table _time cf_app_name msg.TransactionID msg.message.status msg.message.details
+3. Check if Fields are Already Extracted:
+
+If msg.TransactionID and msg.message are already extracted fields and not nested or structured data, you may not need spath. You can simplify the query:
+
+spl
+Copy code
+index=login_pcf_np "transid123"
+| table _time cf_app_name TransactionID msg.message
