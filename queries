@@ -326,3 +326,16 @@ spl
 Copy code
 index=login_pcf_np "transid123"
 | table _time cf_app_name TransactionID msg.message
+
+
+index=<your_index> source=<your_source> OR sourcetype=<your_sourcetype>
+NOT (msg.message="TransmitException" OR msg.message="Credit Bureau Processing Exception" OR msg.message="Exception in Registration Flag Validation")
+| rex field=msg.message "(?<exception_message>^[^\n]+)"
+| stats count by exception_message
+| sort -count
+
+
+index=<your_index> source=<your_source> OR sourcetype=<your_sourcetype>
+| rex field=msg.message "(?<exception_message>^[^\n]+)"
+| stats count by exception_message
+| sort -count
