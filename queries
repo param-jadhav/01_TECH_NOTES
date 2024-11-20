@@ -365,4 +365,26 @@ index=source "
 | sort - count
 | table error_details, count
 
+source=diego.cell 
+("Exception" OR "Error" OR "Failure" OR "Timeout" OR "Invalid" OR "Critical" OR "Not Found" OR "Rejected" OR "Unknown")
+NOT ("TransmitException" OR "Exception in Registration Flag Validation" OR "Credit Bureau Processing Exception" 
+     OR "BadRequestException" OR "FinalPacketException" OR "CashFlowException" 
+     OR "Throwing final packet exception" OR "ConstraintViolationException" 
+     OR "MultifactorAuthenticationException" OR "B2C-IovationException" 
+     OR "Transmit final response:" OR "Preparing transmit final response in handler" 
+     OR "com.newrelic.agent.ForceRestartException" OR "Tempass service ResponseTime" 
+     OR "CreditProcessingEndpoint returning normal response without body" 
+     OR "Validation errors: ErrorResponse" OR "credit.application.internalError" 
+     OR "UnknownHostException" OR "Multifactor Authentication complete response" 
+     OR "B2C-TandemException Socket Timeout occurred when connecting to Tandem Host" 
+     OR "RetailCardApply Internal Server Exception handling statusCode" 
+     OR "CashFlowException handling with applicationId" OR "Throwing Multifactor authentication exception" 
+     OR "B2C-TandemException Complete state name not found for state")
+| rex field=_raw "(?i)(Exception|Error|Failure|Timeout|Invalid|Critical|Not Found|Rejected|Unknown|SQL Error|StackTrace):(?<error_details>[^\n]+)"
+| eval error_summary=if(isnotnull(error_details), error_details, msg.message)
+| stats count by error_summary
+| sort - count
+| rename error_summary AS "Error/Exception", count AS "Occurrences"
+
+
 
