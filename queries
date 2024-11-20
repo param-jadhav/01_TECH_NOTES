@@ -342,7 +342,27 @@ index=<your_index> source=<your_source> OR sourcetype=<your_sourcetype>
 
 index=<your_index> source=<your_source> "api" (error OR exception)
 | rex field=_raw "Exception:(?<exception>[^\n]+)"
+
+
+
 | stats count by exception
+| sort - county
+
+index 
+("Exception" OR "Error" OR "Failure" OR "Timeout" OR "Invalid" OR "Critical" OR "Not Found" OR "Rejected" OR "Unknown")
+| rex field=_raw "(?i)(error|exception|failure|invalid|timeout|critical|not found|rejected|unknown|SQL Error|StackTrace):(?<error_details>[^\n]+)"
+| stats count by error_details
 | sort - count
+
+
+| table error_details, count
+
+
+index=source " 
+("Exception" OR "Error" OR "credit.application.internalError" OR "credit bureau" OR "TimeoutException" OR "ConstraintViolationException")
+| rex field=_raw "(?i)(Exception|Error|Timeout|Violation|InternalError|Critical|SQL Error|StackTrace):(?<error_details>[^\n]+)"
+| stats count by error_details
+| sort - count
+| table error_details, count
 
 
