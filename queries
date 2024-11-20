@@ -339,3 +339,10 @@ index=<your_index> source=<your_source> OR sourcetype=<your_sourcetype>
 | rex field=msg.message "(?<exception_message>^[^\n]+)"
 | stats count by exception_message
 | sort -count
+
+index=<your_index> source=<your_source> "api" (error OR exception)
+| rex field=_raw "Exception:(?<exception>[^\n]+)"
+| stats count by exception
+| sort - count
+
+
