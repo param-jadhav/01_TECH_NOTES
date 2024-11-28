@@ -1,0 +1,8 @@
+pool:
+  initsize: 5                  # Increased to ensure more connections are ready for use
+  maxtotal: 15                 # Increased to handle higher concurrency
+  connectionTimeout: 1000      # Increased to allow threads to wait longer for a connection
+  idealTimeout: 600000         # Retained, as it's sufficient for idle connections
+  maxLifetime: 1800000         # Retained, aligns with database connection policies
+  validationTimeout: 1000      # Retained, ensures quick connection validation
+  poolName:                    # No changes
