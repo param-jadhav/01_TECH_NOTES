@@ -383,6 +383,19 @@ index=<your_index> source=<your_source> "apply"
 | stats count as Occurrences by error_code, error_message, http_status, transaction_id
 | sort - Occurrences
 
+index
+
+| rex "\"message\":\"Response Processing Time: \d+ seconds, (?<responseTime>\d+) millis"
+| table _time responseTime
+
+index cf_app_name="p"
+| rex "responseCode=(?<responseCode>.*?),"
+| rex ", responseDesc=(?<responseDesc>.*?)"
+| rex "Response Processing Time: \d+ seconds, (?<responseTime>\d+) millis"
+| stats count by foundation responseCode responseDesc responseTime
+
+
+
 
 
 
