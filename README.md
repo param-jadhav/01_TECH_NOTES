@@ -78,3 +78,30 @@ If the send operation succeeds, it logs the success and sets the relevant fields
 If an exception occurs, it logs the error and sets the error details in KafkaResponse.
 The controller method calls sendDataToKafka and directly returns the KafkaResponse.
 This approach ensures that the Kafka send operation is completed before the controller sends a response to the client. However, be aware that blocking the thread while waiting for Kafka may impact the performance and scalability of your application, especially under heavy load.
+
+
+
+.retryWhen(
+    Retry.fixedDelay(
+        emailConsumerPropertiesConfig.getMaxAttempts(),
+        Duration.ofSeconds(emailConsumerPropertiesConfig.getRetryDelaySeconds())
+    )
+    .filter(throwable -> throwable instanceof WebClientResponseException)
+    .doBeforeRetry(r ->
+        log.info("Transaction Id: {} | Retrying attempt #{} due to {}",
+                 transactionId, r.totalRetries(), r.failure().getMessage()))
+)
+.doOnSuccess(v -> {
+    savedEmailDataDTO.setStatus(ServiceConstants.EMAIL_SUCCESS_STATUS);
+    emailDataDao.saveEmailData(savedEmailDataDTO);
+    log.info("Transaction Id: {} | Send Email success", transactionId);
+})
+.doOnError(ex -> {
+    // Update DB for failure
+    savedEmailDataDTO.setStatus(ServiceConstants.EMAIL_FAILED_STATUS);
+    emailDataDao.saveEmailData(savedEmailDataDTO);
+    log.error("Transaction Id: {} | Send Email Failed: {}", transactionId, ex.getMessage(), ex);
+})
+// This is the key part: convert the error so Rabbit can DLQ
+.onErrorMap(ex -> new AmqpRejectAndDontRequeueException("Force DLQ after REST failure", ex))
+.subscribe();
