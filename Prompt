@@ -31,3 +31,65 @@ Why this is better than your current setup:
  * No Data Loss: Even with auto-commit=true, the error handler intercepts the failure and pushes the message to safety (the retry topic) before the loop continues.
  * Resource Friendly: By using separate topics for 1-hour or 1-day retries, you don't clog up memory with "waiting" messages.
 Would you like me to generate the specific Java configuration code for this DefaultErrorHandler right now?
+
+
+You are acting as a senior Kafka + Spring Boot architect.
+
+Context:
+- I have a Spring Boot application using Kafka.
+- Main topic processing already has retries configured.
+- I am using ONLY ONE DLT topic (no retry-topic chain).
+- Kafka topic creation is restricted (banking domain), so no additional retry topics are allowed.
+- I already implemented the solution and need you to VERIFY correctness, not redesign from scratch.
+
+Business requirement:
+1. Main Topic behavior:
+   - Message is consumed from main topic.
+   - If processing fails, retries happen based on configured retry policy.
+   - After retries are exhausted, the message is sent to a SINGLE DLT topic.
+   - Main topic processing must NEVER block due to DLT failures.
+   - Offsets must commit correctly so other messages continue processing.
+
+2. DLT Retry behavior (CRITICAL):
+   - DLT listener must retry the SAME message when a ResourceUnavailable / transient exception occurs:
+     - 1st retry: immediate
+     - 2nd retry: after 1 minute
+     - 3rd retry: after 10 minutes
+   - No retry-topic chain is allowed.
+   - Delay can be implemented via:
+     - sleep/backoff
+     - scheduler
+     - manual re-publish to same DLT topic
+   - If retries succeed → message processing completes.
+   - If all retries fail → STOP retry loop permanently.
+
+3. Terminal persistence:
+   - After final DLT retry failure:
+     - Message must be persisted in a terminal store (DB / audit table / file / log store).
+     - It must be marked as FINAL_FAILURE / NON_RETRYABLE.
+     - The same message must NOT be retried again.
+   - Persistence must be idempotent (no duplicate terminal records).
+
+4. Error isolation:
+   - Main-topic error handling must be separate from DLT error handling.
+   - Exception in DLT listener must NOT affect:
+     - Main topic consumers
+     - Consumer group stability
+     - Offset commits of main topic
+
+What I want you to verify:
+- Is my current implementation meeting ALL the above requirements?
+- Are retries happening exactly as: 0s → 1m → 10m?
+- Is only ONE DLT topic being used?
+- Is there any risk of infinite retry loops?
+- Are offsets committed safely in both main topic and DLT?
+- Is terminal persistence implemented correctly and safely?
+- Are there any race conditions or consumer-blocking risks?
+- Are logs clear enough to trace:
+  - retry attempt number
+  - final failure
+  - terminal persistence
+
+If something is missing or unsafe:
+- Point it out clearly
+- Suggest minimal fixes without introducing new Kafka topics
