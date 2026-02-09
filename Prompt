@@ -93,3 +93,75 @@ What I want you to verify:
 If something is missing or unsafe:
 - Point it out clearly
 - Suggest minimal fixes without introducing new Kafka topics
+
+
+============
+
+
+Act as a senior Spring Kafka architect.
+
+Context:
+- Spring Boot 3.x application
+- Java 17
+- Apache Kafka with Spring Kafka
+- Banking / financial domain (no message loss allowed)
+- Kafka topic creation is controlled by admins (topics must be minimal)
+
+Current state:
+- DefaultErrorHandler is already configured for retries
+- DLT is NOT implemented yet
+- Retry-only behavior exists today
+
+Goal:
+Implement a clean, production-ready Dead Letter Topic (DLT) solution.
+
+Constraints:
+1. Use ONE shared DLT topic only (example: common_dlt_qa)
+2. Do NOT use retry-topic chains
+3. Do NOT auto-create topics
+4. Main topic processing must NEVER block
+5. No infinite retry loops
+
+Functional requirements:
+1. Main topic behavior:
+   - Retry transient failures using DefaultErrorHandler
+   - After retries are exhausted → publish message to DLT
+   - Commit offset after publishing to DLT
+
+2. DLT behavior:
+   - Consume from common_dlt_qa
+   - Retry DLT processing using a separate error handler
+   - Retry schedule:
+       - Attempt 1: immediate
+       - Attempt 2: after 1 minute
+       - Attempt 3: after 10 minutes
+   - After final failure:
+       - Persist message to terminal storage (DB or file)
+       - Log error clearly
+       - Stop retrying permanently
+
+3. Error handling:
+   - Use custom RetryableException for transient failures
+   - Non-retryable exceptions must go directly to terminal persistence
+   - Separate error handlers for:
+       - main topic
+       - DLT topic
+
+4. Observability:
+   - Log retry attempts with topic, key, attempt number
+   - Log when message is sent to DLT
+   - Log when message reaches terminal state
+
+Deliverables:
+- KafkaConfig with:
+    - DeadLetterPublishingRecoverer
+    - DefaultErrorHandler for main topics
+    - Separate DefaultErrorHandler for DLT
+- Example main-topic listener
+- Example DLT listener
+- Terminal persistence strategy (simple DB or log-based example)
+- Clear comments explaining retry vs DLT vs terminal behavior
+
+Do NOT include retry-topic chain solutions.
+Do NOT assume topic auto-creation.
+
